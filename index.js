@@ -18,12 +18,13 @@ module.exports = (
           ctx.incremental(), `with ids_to_update as \
         (select ${uniqueKey}, ${hash}  from ${ctx.ref(source)}\
         except distinct \
-        (select ${uniqueKey}, ${hash} from ${ctx.self()}))`
+        (select ${uniqueKey}, ${hash} from ${ctx.self()}\
+           qualify row_number() over (partition by ${uniqueKey} order by ${timestamp} desc) = 1))`
       )}
       select * from ${ctx.ref(source)}
       ${ctx.when(
           ctx.incremental(),
-          `where ${timestamp} > (select max(${timestamp}) from ${ctx.self()})
+          `where ${timestamp} > IFNULL((select max(${timestamp}) from ${ctx.self()}), TIMESTAMP_SUB(${timestamp}, INTERVAL 1 SECOND))
         and ${uniqueKey} in (select ${uniqueKey} from ids_to_update)`
       )}`
     :

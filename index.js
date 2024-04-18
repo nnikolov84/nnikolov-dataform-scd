@@ -3,7 +3,7 @@
  */
 module.exports = (
     name,
-    { uniqueKey, hash, timestamp, source, tags, incrementalConfig, columns = {}, sourceFilteringCond }
+    { uniqueKey, hash, timestamp, source, tags, incrementalConfig, columns = {}, sourceFilteringCond}
 ) => {
   // Create an incremental table with just pure updates, for a full history of the table.
   const updates = publish(`${name}_updates`, {
@@ -16,16 +16,17 @@ module.exports = (
        (ctx) => `
     ${ctx.when(
           ctx.incremental(), `with ids_to_update as \
-        (select ${uniqueKey}, ${hash}  from ${ctx.ref(source)} if(${sourceFilteringCond}) { where ${sourceFilteringCond}}\
+        (select ${uniqueKey}, ${hash}  from ${ctx.ref(source)} where ${sourceFilteringCond}\
         except distinct \
-        (select ${uniqueKey}, ${hash} from ${ctx.self()}\
-           qualify row_number() over (partition by ${uniqueKey} order by ${timestamp} desc) = 1 if(${sourceFilteringCond}) { where ${sourceFilteringCond}}))`
+        (select ${uniqueKey}, ${hash} from ${ctx.self()} where ${sourceFilteringCond}\
+           qualify row_number() over (partition by ${uniqueKey} order by ${timestamp} desc) = 1 ))`
       )}
       select * from ${ctx.ref(source)}
       ${ctx.when(
           ctx.incremental(),
           `where ${timestamp} > IFNULL((select max(${timestamp}) from ${ctx.self()}), TIMESTAMP_SUB(${timestamp}, INTERVAL 1 SECOND))
-        and ${uniqueKey} in (select ${uniqueKey} from ids_to_update) if(${sourceFilteringCond}) { and ${sourceFilteringCond}}`
+        and ${uniqueKey} in (select ${uniqueKey} from ids_to_update)\
+        and ${sourceFilteringCond}`
       )}`
     :
   (ctx) => `

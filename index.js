@@ -16,9 +16,9 @@ module.exports = (
        (ctx) => `
     ${ctx.when(
           ctx.incremental(), `with ids_to_update as \
-        (select ${uniqueKey}, ${hash}  from ${ctx.ref(source)} where ${sourceFilteringCond}\
+        (select ${uniqueKey}, ${hash}  from ${ctx.ref(source)} ${sourceFilteringCond ? ` where ${sourceFilteringCond}` : ''}\
         except distinct \
-        (select ${uniqueKey}, ${hash} from ${ctx.self()} where ${sourceFilteringCond}\
+        (select ${uniqueKey}, ${hash} from ${ctx.self()} ${sourceFilteringCond ? ` where ${sourceFilteringCond}` : ''}\
            qualify row_number() over (partition by ${uniqueKey} order by ${timestamp} desc) = 1 ))`
       )}
       select * from ${ctx.ref(source)}
@@ -26,7 +26,7 @@ module.exports = (
           ctx.incremental(),
           `where ${timestamp} > IFNULL((select max(${timestamp}) from ${ctx.self()}), TIMESTAMP_SUB(${timestamp}, INTERVAL 1 SECOND))
         and ${uniqueKey} in (select ${uniqueKey} from ids_to_update)\
-        and ${sourceFilteringCond}`
+        ${sourceFilteringCond ? ` and ${sourceFilteringCond}` : ''}`
       )}`
     :
   (ctx) => `

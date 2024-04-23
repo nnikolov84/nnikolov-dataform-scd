@@ -25,7 +25,7 @@ module.exports = (
       ${ctx.when(
           ctx.incremental(),
           `where ${timestamp} > IFNULL((select max(${timestamp}) from ${ctx.self()}), TIMESTAMP_SUB(${timestamp}, INTERVAL 1 SECOND))
-        and ${uniqueKey} in (select ${uniqueKey} from ids_to_update)\
+        and (${uniqueKey}) in (select (${uniqueKey}) from ids_to_update)\
         ${sourceFilteringCond ? ` and ${sourceFilteringCond}` : ''}`
       )}`
     :
